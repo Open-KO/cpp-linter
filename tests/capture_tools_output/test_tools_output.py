@@ -66,7 +66,7 @@ def make_comment(
     files: List[FileObj],
 ):
     format_checks_failed = tally_format_advice(files)
-    tidy_checks_failed = tally_tidy_advice(files)
+    tidy_checks_failed, tidy_checks_failed_errors = tally_tidy_advice(files)
     clang_versions = ClangVersions()
     clang_versions.format = "x.y.z"
     clang_versions.tidy = "x.y.z"
@@ -76,7 +76,7 @@ def make_comment(
         format_checks_failed=format_checks_failed,
         clang_versions=clang_versions,
     )
-    return comment, format_checks_failed, tidy_checks_failed
+    return comment, format_checks_failed, tidy_checks_failed, tidy_checks_failed_errors
 
 
 def prep_api_client(
@@ -286,7 +286,7 @@ def test_format_annotations(
     log_commander.propagate = True
 
     # check thread comment
-    comment, format_checks_failed, _ = make_comment(files)
+    comment, format_checks_failed, _, _ = make_comment(files)
     if format_checks_failed:
         assert f"{format_checks_failed} file(s) not formatted</strong>" in comment
 
@@ -364,7 +364,7 @@ def test_tidy_annotations(
     caplog.set_level(logging.DEBUG)
     log_commander.propagate = True
     gh_client.make_annotations(files, style="")
-    _, format_checks_failed, tidy_checks_failed = make_comment(files)
+    _, format_checks_failed, tidy_checks_failed, _ = make_comment(files)
     assert not format_checks_failed
     messages = [
         r.message
@@ -408,10 +408,13 @@ def test_all_ok_comment(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
 
     # this call essentially does nothing with the file system
     capture_clang_tools_output(files, args=args)
-    comment, format_checks_failed, tidy_checks_failed = make_comment(files)
+    comment, format_checks_failed, tidy_checks_failed, tidy_checks_failed_errors = (
+        make_comment(files)
+    )
     assert "No problems need attention." in comment
     assert not format_checks_failed
     assert not tidy_checks_failed
+    assert not tidy_checks_failed_errors
 
 
 @pytest.mark.parametrize(

@@ -109,7 +109,7 @@ def test_ninja_database(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
         pytest.fail("no project files raised concerns with clang-tidy")
 
     format_checks_failed = tally_format_advice(files)
-    tidy_checks_failed = tally_tidy_advice(files)
+    tidy_checks_failed, tidy_checks_failed_errors = tally_tidy_advice(files)
     comment = GithubApiClient.make_comment(
         files=files,
         tidy_checks_failed=tidy_checks_failed,
@@ -118,6 +118,7 @@ def test_ninja_database(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
     )
 
     assert tidy_checks_failed
+    assert tidy_checks_failed_errors
     assert not format_checks_failed
 
     # write step-summary for manual verification

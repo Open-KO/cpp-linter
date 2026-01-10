@@ -76,6 +76,7 @@ class GithubApiClient(RestApiClient):
         checks_failed: int,
         format_checks_failed: Optional[int] = None,
         tidy_checks_failed: Optional[int] = None,
+        tidy_checks_failed_errors: Optional[int] = None,
     ):
         if "GITHUB_OUTPUT" in environ:
             with open(environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as env_file:
@@ -84,8 +85,14 @@ class GithubApiClient(RestApiClient):
                     f"clang-format-checks-failed={format_checks_failed or 0}\n"
                 )
                 env_file.write(f"clang-tidy-checks-failed={tidy_checks_failed or 0}\n")
+                env_file.write(
+                    f"clang-tidy-checks-failed-errors={tidy_checks_failed_errors or 0}\n"
+                )
         return super().set_exit_code(
-            checks_failed, format_checks_failed, tidy_checks_failed
+            checks_failed,
+            format_checks_failed,
+            tidy_checks_failed,
+            tidy_checks_failed_errors,
         )
 
     def get_list_of_changed_files(
@@ -216,7 +223,7 @@ class GithubApiClient(RestApiClient):
         clang_versions: ClangVersions,
     ):
         format_checks_failed = tally_format_advice(files)
-        tidy_checks_failed = tally_tidy_advice(files)
+        tidy_checks_failed, tidy_checks_failed_errors = tally_tidy_advice(files)
         checks_failed = format_checks_failed + tidy_checks_failed
         comment: Optional[str] = None
 
@@ -241,6 +248,7 @@ class GithubApiClient(RestApiClient):
             checks_failed=checks_failed,
             format_checks_failed=format_checks_failed,
             tidy_checks_failed=tidy_checks_failed,
+            tidy_checks_failed_errors=tidy_checks_failed_errors,
         )
 
         if args.thread_comments != "false":

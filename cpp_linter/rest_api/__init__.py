@@ -131,20 +131,26 @@ class RestApiClient(ABC):
         checks_failed: int,
         format_checks_failed: Optional[int] = None,
         tidy_checks_failed: Optional[int] = None,
+        tidy_checks_failed_errors: Optional[int] = None,
     ):
         """Set the action's output values and shows them in the log output.
 
-        :param checks_failed: A int describing the total number of checks that failed.
-        :param format_checks_failed: A int describing the number of checks that failed
+        :param checks_failed: An int describing the total number of checks that failed.
+        :param format_checks_failed: An int describing the number of checks that failed
             only for clang-format.
-        :param tidy_checks_failed: A int describing the number of checks that failed
-            only for clang-tidy.
+        :param tidy_checks_failed: An int describing the number of checks that failed
+            (includes warnings) only for clang-tidy.
+        :param tidy_checks_failed_errors: An int describing the number of checks that failed
+            (excludes warnings) only for clang-tidy.
 
         :returns:
             The ``checks_failed`` parameter was not passed.
         """
         logger.info("%d clang-format-checks-failed", format_checks_failed or 0)
         logger.info("%d clang-tidy-checks-failed", tidy_checks_failed or 0)
+        logger.info(
+            "%d clang-tidy-checks-failed-errors", tidy_checks_failed_errors or 0
+        )
         logger.info("%d checks-failed", checks_failed)
         return checks_failed
 
@@ -182,7 +188,8 @@ class RestApiClient(ABC):
 
         :param files: A list of objects, each describing a file's information.
         :param format_checks_failed: The amount of clang-format checks that have failed.
-        :param tidy_checks_failed: The amount of clang-tidy checks that have failed.
+        :param tidy_checks_failed: The amount of clang-tidy checks that have failed
+            (including warnings).
         :param clang_versions: The versions of the clang tools used.
         :param len_limit: The length limit of the comment generated.
 

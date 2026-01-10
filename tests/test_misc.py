@@ -24,20 +24,25 @@ from cpp_linter.clang_tools.clang_tidy import TidyNotification
 
 @pytest.mark.no_clang
 def test_exit_output(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
-    """Test exit code that indicates if action encountered lining errors."""
+    """Test exit code that indicates if action encountered linting errors."""
     env_file = tmp_path / "GITHUB_OUTPUT"
     monkeypatch.setenv("GITHUB_OUTPUT", str(env_file))
     gh_client = GithubApiClient()
     tidy_checks_failed = 1
+    tidy_checks_failed_errors = 1
     format_checks_failed = 2
     checks_failed = 3
     assert 3 == gh_client.set_exit_code(
-        checks_failed, format_checks_failed, tidy_checks_failed
+        checks_failed,
+        format_checks_failed,
+        tidy_checks_failed,
+        tidy_checks_failed_errors,
     )
     output = env_file.read_text(encoding="utf-8")
     assert f"checks-failed={checks_failed}\n" in output
     assert f"format-checks-failed={format_checks_failed}\n" in output
     assert f"tidy-checks-failed={tidy_checks_failed}\n" in output
+    assert f"tidy-checks-failed-errors={tidy_checks_failed_errors}\n" in output
 
 
 # see https://github.com/pytest-dev/pytest/issues/5997

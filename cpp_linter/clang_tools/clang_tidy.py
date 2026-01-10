@@ -174,18 +174,21 @@ class TidyAdvice(PatchMixin):
                         review_comments.suggestions.append(suggestion)
 
 
-def tally_tidy_advice(files: List[FileObj]) -> int:
-    """Returns the sum of clang-format errors"""
+def tally_tidy_advice(files: List[FileObj]) -> Tuple[int, int]:
+    """Returns the sum of clang-tidy warnings and errors"""
     tidy_checks_failed = 0
+    tidy_checks_failed_errors = 0
     for file_obj in files:
         if not file_obj.tidy_advice:
             continue
         for note in file_obj.tidy_advice.notes:
             if file_obj.name == note.filename:
                 tidy_checks_failed += 1
+                if note.severity in ["error", "fatal"]:
+                    tidy_checks_failed_errors += 1
             else:
                 logger.debug("%s != %s", file_obj.name, note.filename)
-    return tidy_checks_failed
+    return (tidy_checks_failed, tidy_checks_failed_errors)
 
 
 def run_clang_tidy(
