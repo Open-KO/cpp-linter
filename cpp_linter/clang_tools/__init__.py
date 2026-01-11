@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import re
 import subprocess
+import sys
 from typing import Optional, List, Dict, Tuple, cast
 import shutil
 
@@ -218,7 +219,11 @@ def capture_clang_tools_output(
             file_name, logs, tidy_advice, format_advice = future.result()
 
             start_log_group(f"Performing checkup on {file_name}")
-            print(logs, flush=True)
+            try:
+                print(logs, flush=True)
+            except UnicodeEncodeError:
+                sys.stdout.buffer.write(logs.encode("utf-8", errors="replace"))
+                sys.stdout.flush()
             end_log_group()
 
             if tidy_advice or format_advice:
