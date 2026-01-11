@@ -323,19 +323,18 @@ class GithubApiClient(RestApiClient):
             if not file_obj.tidy_advice:
                 continue
             for note in file_obj.tidy_advice.notes:
-                if note.filename == file_obj.name:
-                    output = "::{} ".format(
-                        "notice" if note.severity.startswith("note") else note.severity
-                    )
-                    output += "file={file},line={line},title={file}:{line}:".format(
-                        file=file_obj.name, line=note.line
-                    )
-                    output += "{cols} [{diag}]::{info}".format(
-                        cols=note.cols,
-                        diag=note.diagnostic,
-                        info=note.rationale,
-                    )
-                    log_commander.info(output)
+                output = "::{} ".format(
+                    "notice" if note.severity.startswith("note") else note.severity
+                )
+                output += "file={file},line={line},title={file}:{line}:".format(
+                    file=file_obj.name, line=note.line
+                )
+                output += "{cols} [{diag}]::{info}".format(
+                    cols=note.cols,
+                    diag=note.diagnostic,
+                    info=note.rationale,
+                )
+                log_commander.info(output)
 
     def update_comment(
         self,

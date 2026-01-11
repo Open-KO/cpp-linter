@@ -270,29 +270,26 @@ class RestApiClient(ABC):
             if not file_obj.tidy_advice:
                 continue
             for note in file_obj.tidy_advice.notes:
-                if file_obj.name == note.filename:
-                    tidy_comment = "- **{filename}:{line}:{cols}:** ".format(
-                        filename=file_obj.name,
-                        line=note.line,
-                        cols=note.cols,
-                    )
-                    tidy_comment += (
-                        "{severity}: [{diagnostic}]\n   > {rationale}\n".format(
-                            severity=note.severity,
-                            diagnostic=note.diagnostic_link,
-                            rationale=note.rationale,
-                        )
-                    )
-                    if note.fixit_lines:
-                        ext = PurePath(file_obj.name).suffix.lstrip(".")
-                        suggestion = "\n   ".join(note.fixit_lines)
-                        tidy_comment += f"\n   ```{ext}\n   {suggestion}\n   ```\n"
+                tidy_comment = "- **{filename}:{line}:{cols}:** ".format(
+                    filename=file_obj.name,
+                    line=note.line,
+                    cols=note.cols,
+                )
+                tidy_comment += "{severity}: [{diagnostic}]\n   > {rationale}\n".format(
+                    severity=note.severity,
+                    diagnostic=note.diagnostic_link,
+                    rationale=note.rationale,
+                )
+                if note.fixit_lines:
+                    ext = PurePath(file_obj.name).suffix.lstrip(".")
+                    suggestion = "\n   ".join(note.fixit_lines)
+                    tidy_comment += f"\n   ```{ext}\n   {suggestion}\n   ```\n"
 
-                    if (
-                        len_limit is None
-                        or len(comment) + len(closer) + len(tidy_comment) < len_limit
-                    ):
-                        comment += tidy_comment
+                if (
+                    len_limit is None
+                    or len(comment) + len(closer) + len(tidy_comment) < len_limit
+                ):
+                    comment += tidy_comment
         return comment + closer
 
     def post_feedback(

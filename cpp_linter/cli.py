@@ -37,6 +37,21 @@ class Args(UserDict):
         "cxx",
         "hxx",
     ]
+    #: See :std:option:`--clang-tidy-extensions`.
+    clang_tidy_extensions: List[str] = [
+        "c",
+        "h",
+        "C",
+        "H",
+        "cpp",
+        "hpp",
+        "cc",
+        "hh",
+        "c++",
+        "h++",
+        "cxx",
+        "hxx",
+    ]
     #: See :std:option:`--repo-root`.
     repo_root: str = "."
     #: See :std:option:`--ignore`.
@@ -166,6 +181,15 @@ _parser_args[("-V", "--version")] = dict(
 Defaults to ``''``""",
 )
 _parser_args[("-e", "--extensions")] = dict(
+    default="c,h,C,H,cpp,hpp,cc,hh,c++,h++,cxx,hxx",
+    type=lambda i: [ext.strip().lstrip(".") for ext in i.split(",")],
+    help="""The file extensions to pass the tools.
+This is a comma-separated string of extensions.
+Defaults to:
+    %(default)s
+""",
+)
+_parser_args[("--clang-tidy-extensions",)] = dict(
     default="c,h,C,H,cpp,hpp,cc,hh,c++,h++,cxx,hxx",
     type=lambda i: [ext.strip().lstrip(".") for ext in i.split(",")],
     help="""The file extensions to analyze.
