@@ -1,6 +1,5 @@
 """Parse output from clang-tidy's stdout"""
 
-import json
 import os
 from pathlib import Path, PurePath
 import re
@@ -201,6 +200,7 @@ def run_clang_tidy(
     db_json: Optional[List[Dict[str, str]]],
     tidy_review: bool,
     style: str,
+    line_filter_json: Optional[str],
 ) -> TidyAdvice:
     """Run clang-tidy on a certain file.
 
@@ -233,6 +233,7 @@ def run_clang_tidy(
         ``compile_commands.json file``.
     :param tidy_review: A flag to enable/disable creating a diff suggestion for
         PR review comments.
+    :param line_filter: JSON output of all files to filter analysis for.
     """
     filename = file_obj.name.replace("/", os.sep)
     cmds = [command]
@@ -241,15 +242,11 @@ def run_clang_tidy(
     if database:
         cmds.append("-p")
         cmds.append(database)
-    line_ranges = {
-        "name": filename,
-        "lines": file_obj.range_of_changed_lines(lines_changed_only, get_ranges=True),
-    }
     if style:
         cmds.extend(["--format-style", style])
-    if line_ranges["lines"]:
-        # logger.info("line_filter = %s", json.dumps([line_ranges]))
-        cmds.append(f"--line-filter={json.dumps([line_ranges])}")
+    if lines_changed_only and line_filter_json:
+        # logger.info("line_filter = %s", line_filter)
+        cmds.append(f"--line-filter={line_filter_json}")
     if len(extra_args) == 1 and " " in extra_args[0]:
         extra_args = extra_args[0].split()
     for extra_arg in extra_args:

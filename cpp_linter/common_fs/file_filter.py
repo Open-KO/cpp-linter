@@ -153,7 +153,9 @@ class FileFilter:
             Otherwise ``False``.
         """
         file_path = PurePath(file_name)
-        return file_path.suffix.lstrip(".") in self.extensions and (
+        return (
+            len(self.extensions) == 0 or file_path.suffix.lstrip(".") in self.extensions
+        ) and (
             self.is_file_in_list(ignored=False, file_name=file_path)
             or not self.is_file_in_list(ignored=True, file_name=file_path)
         )
