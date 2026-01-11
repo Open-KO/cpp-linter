@@ -1,5 +1,6 @@
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import json
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -42,6 +43,7 @@ def _run_on_single_file(
     format_cmd: Optional[str],
     format_filter: Optional[FormatFileFilter],
     tidy_filter: Optional[TidyFileFilter],
+    tidy_line_filter_json: Optional[str],
     args: Args,
 ) -> Tuple[str, str, Optional[TidyAdvice], Optional[FormatAdvice]]:
     log_stream = worker_log_init(log_lvl)
@@ -84,6 +86,7 @@ def _run_on_single_file(
                 db_json=db_json,
                 tidy_review=args.tidy_review,
                 style=args.style,
+                line_filter_json=tidy_line_filter_json,
             )
         except FileIOTimeout:  # pragma: no cover
             logger.error(
@@ -119,12 +122,17 @@ class ClangVersions:
         self.format: Optional[str] = None
 
 
-def capture_clang_tools_output(files: List[FileObj], args: Args) -> ClangVersions:
+def capture_clang_tools_output(
+    files: List[FileObj],
+    args: Args,
+    files_to_analyze_tidy: Optional[List[FileObj]] = None,
+) -> ClangVersions:
     """Execute and capture all output from clang-tidy and clang-format. This aggregates
     results in the :attr:`~cpp_linter.Globals.OUTPUT`.
 
-    :param files: A list of files to analyze.
+    :param files: A list of files to process.
     :param args: A namespace of parsed args from the :doc:`CLI <../cli_args>`.
+    :param files_to_analyze_tidy: A list of files for clang-tidy to analyze.
     """
 
     tidy_cmd, format_cmd = (None, None)
@@ -159,22 +167,51 @@ def capture_clang_tools_output(files: List[FileObj], args: Args) -> ClangVersion
         if db_path.exists():
             db_json = json.loads(db_path.read_text(encoding="utf-8"))
 
+    tidy_line_filter_json = None
+    if args.lines_changed_only and files_to_analyze_tidy:
+        all_line_ranges = []
+        for file in files_to_analyze_tidy:
+            line_ranges = {
+                "name": file.name.replace("/", os.sep),
+                "lines": file.range_of_changed_lines(
+                    args.lines_changed_only, get_ranges=True
+                ),
+            }
+
+            if line_ranges["lines"]:
+                all_line_ranges.append(line_ranges)
+
+        tidy_line_filter_json = json.dumps(all_line_ranges)
+
     with ProcessPoolExecutor(args.jobs) as executor:
         log_lvl = logger.getEffectiveLevel()
-        futures = [
-            executor.submit(
-                _run_on_single_file,
-                file,
-                log_lvl=log_lvl,
-                tidy_cmd=tidy_cmd,
-                db_json=db_json,
-                format_cmd=format_cmd,
-                format_filter=format_filter,
-                tidy_filter=tidy_filter,
-                args=args,
+        futures = []
+        for file in files:
+            if args.lines_changed_only and not files_to_analyze_tidy:
+                line_ranges = {
+                    "name": file.name.replace("/", os.sep),
+                    "lines": file.range_of_changed_lines(
+                        args.lines_changed_only, get_ranges=True
+                    ),
+                }
+
+                if line_ranges["lines"]:
+                    tidy_line_filter_json = json.dumps([line_ranges])
+
+            futures.append(
+                executor.submit(
+                    _run_on_single_file,
+                    file,
+                    log_lvl=log_lvl,
+                    tidy_cmd=tidy_cmd,
+                    db_json=db_json,
+                    format_cmd=format_cmd,
+                    format_filter=format_filter,
+                    tidy_filter=tidy_filter,
+                    tidy_line_filter_json=tidy_line_filter_json,
+                    args=args,
+                )
             )
-            for file in files
-        ]
 
         # temporary cache of parsed notifications for use in log commands
         for future in as_completed(futures):
