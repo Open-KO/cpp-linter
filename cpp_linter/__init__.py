@@ -37,7 +37,7 @@ def main():
 
     # prepare ignored paths list
     global_file_filter = FileFilter(
-        extensions=args.extensions, ignore_value=args.ignore, not_ignored=args.files
+        extensions=[], ignore_value=args.ignore, not_ignored=args.files
     )
     global_file_filter.parse_submodules()
 
@@ -46,6 +46,8 @@ def main():
     CACHE_PATH.mkdir(exist_ok=True)
 
     start_log_group("Get list of specified source files")
+    files_to_process = []
+    files_to_analyze_tidy = []
     if args.files_changed_only:
         files = rest_api_client.get_list_of_changed_files(
             file_filter=global_file_filter,
@@ -73,13 +75,32 @@ def main():
     if not files:
         logger.info("No source files need checking!")
     else:
+        # filter to those applicable for running directly with tools
+        global_file_filter.extensions = set(args.extensions)
+        files_to_process = [
+            f for f in files if global_file_filter.is_source_or_ignored(f.name)
+        ]
+
+        # filter to those applicable for analyzing with clang-tidy within a run
+        global_file_filter.extensions = set(args.clang_tidy_extensions)
+        files_to_analyze_tidy = [
+            f for f in files if global_file_filter.is_source_or_ignored(f.name)
+        ]
+
         logger.info(
-            "Giving attention to the following files:\n\t%s",
-            "\n\t".join([f.name for f in files]),
+            "Processing the following files:\n\t%s",
+            "\n\t".join([f.name for f in files_to_process]),
+        )
+
+        logger.info(
+            "Analyzing the following files:\n\t%s",
+            "\n\t".join([f.name for f in files_to_analyze_tidy]),
         )
     end_log_group()
 
-    clang_versions = capture_clang_tools_output(files=files, args=args)
+    clang_versions = capture_clang_tools_output(
+        files=files_to_process, args=args, files_to_analyze_tidy=files_to_analyze_tidy
+    )
 
     start_log_group("Posting comment(s)")
     rest_api_client.post_feedback(files=files, args=args, clang_versions=clang_versions)
