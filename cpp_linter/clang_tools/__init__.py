@@ -214,6 +214,11 @@ def capture_clang_tools_output(
                 )
             )
 
+        applicable_file_list = files_to_analyze_tidy or files
+        files_by_name = {}
+        for file in applicable_file_list:
+            files_by_name[file.name] = file
+
         # temporary cache of parsed notifications for use in log commands
         for future in as_completed(futures):
             file_name, logs, tidy_advice, format_advice = future.result()
@@ -226,14 +231,29 @@ def capture_clang_tools_output(
                 sys.stdout.flush()
             end_log_group()
 
-            if tidy_advice or format_advice:
+            if format_advice:
                 for file in files:
                     if file.name == file_name:
-                        if tidy_advice:
-                            file.tidy_advice = tidy_advice
-                        if format_advice:
-                            file.format_advice = format_advice
+                        file.format_advice = format_advice
                         break
                 else:  # pragma: no cover
                     raise ValueError(f"Failed to find {file_name} in list of files.")
+
+            if tidy_advice:
+                for note in tidy_advice.notes:
+                    note_file = files_by_name.get(note.filename)
+                    if note_file is None:  # pragma: no cover
+                        raise ValueError(
+                            f"Failed to find {note.filename} in list of files."
+                        )
+
+                    # already has advice
+                    if note_file.tidy_advice:
+                        # verify that we're not inserting a duplicate
+                        if not note_file.tidy_advice.has_note(note):
+                            note_file.tidy_advice.notes.append(note)
+                    # no advice attached to this file yet
+                    else:
+                        note_file.tidy_advice = TidyAdvice(notes=[note])
+
     return clang_versions

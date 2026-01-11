@@ -102,6 +102,19 @@ class TidyNotification:
             + f"{self.diagnostic}>"
         )
 
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, TidyNotification):
+            return (
+                self.filename == other.filename
+                and self.line == other.line
+                and self.cols == other.cols
+                and self.severity == other.severity
+                and self.rationale == other.rationale
+                and self.diagnostic == other.diagnostic
+            )
+
+        return NotImplemented
+
 
 class TidyAdvice(PatchMixin):
     def __init__(self, notes: List[TidyNotification]) -> None:
@@ -171,6 +184,13 @@ class TidyAdvice(PatchMixin):
                     review_comments.tool_total["clang-tidy"] += 1
                     if not _has_related_suggestion(suggestion):
                         review_comments.suggestions.append(suggestion)
+
+    def has_note(self, note: TidyNotification) -> bool:
+        for existing_note in self.notes:
+            if note == existing_note:
+                return True
+
+        return False
 
 
 def tally_tidy_advice(files: List[FileObj]) -> Tuple[int, int]:
