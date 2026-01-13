@@ -236,16 +236,17 @@ def capture_clang_tools_output(
                     if file.name == file_name:
                         file.format_advice = format_advice
                         break
-                else:  # pragma: no cover
-                    raise ValueError(f"Failed to find {file_name} in list of files.")
+                # else:
+                #    raise ValueError(f"Failed to find {file_name} in list of files.")
 
             if tidy_advice:
                 for note in tidy_advice.notes:
                     note_file = files_by_name.get(note.filename)
-                    if note_file is None:  # pragma: no cover
-                        raise ValueError(
-                            f"Failed to find {note.filename} in list of files."
-                        )
+                    if note_file is None:
+                        # raise ValueError(
+                        #    f"Failed to find {note.filename} in list of files."
+                        # )
+                        continue
 
                     # already has advice
                     if note_file.tidy_advice:
